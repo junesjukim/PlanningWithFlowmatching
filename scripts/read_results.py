@@ -68,7 +68,7 @@ def load_result(path):
 if __name__ == '__main__':
 
 	class Parser(utils.Parser):
-	    dataset: str = None
+		dataset: str = None
 
 	args = Parser().parse_args()
 

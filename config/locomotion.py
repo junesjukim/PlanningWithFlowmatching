@@ -11,6 +11,7 @@ args_to_watch = [
     ('prefix', ''),
     ('horizon', 'H'),
     ('n_diffusion_steps', 'T'),
+    ('seed', 'S'),
     ## value kwargs
     ('discount', 'd'),
 ]
@@ -42,7 +43,7 @@ base = {
 
         ## serialization
         'logbase': logbase,
-        'prefix': 'diffusion/defaults',
+        'prefix': 'diffusion/flowmatching',
         'exp_name': watch(args_to_watch),
 
         ## training

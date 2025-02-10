@@ -1,3 +1,5 @@
+#flowmatching 수정 버전
+
 from collections import namedtuple
 import numpy as np
 import torch
@@ -12,21 +14,20 @@ from .helpers import (
     Losses,
 )
 
-
 Sample = namedtuple('Sample', 'trajectories values chains')
 
 
 @torch.no_grad()
 def default_sample_fn(model, x, cond, t):
-    model_mean, _, model_log_variance = model.p_mean_variance(x=x, cond=cond, t=t)
+    '''model_mean, _, model_log_variance = model.p_mean_variance(x=x, cond=cond, t=t)
     model_std = torch.exp(0.5 * model_log_variance)
 
     # no noise when t == 0
     noise = torch.randn_like(x)
-    noise[t == 0] = 0
-
+    noise[t == 0] = 0'''
+    x_less_noisy = model.p_mean_variance(x=x, cond=cond, t=t)
     values = torch.zeros(len(x), device=x.device)
-    return model_mean + model_std * noise, values
+    return x_less_noisy, values
 
 
 def sort_by_values(x, values):
@@ -47,6 +48,8 @@ class GaussianDiffusion(nn.Module):
         action_weight=1.0, loss_discount=1.0, loss_weights=None,
     ):
         super().__init__()
+        #check for correct module installation, import
+        print("imported diffusion.py for flowmatching")
         self.horizon = horizon
         self.observation_dim = observation_dim
         self.action_dim = action_dim
@@ -121,11 +124,11 @@ class GaussianDiffusion(nn.Module):
 
     #------------------------------------------ sampling ------------------------------------------#
 
-    def predict_start_from_noise(self, x_t, t, noise):
-        '''
-            if self.predict_epsilon, model output is (scaled) noise;
-            otherwise, model predicts x0 directly
-        '''
+    '''def predict_start_from_noise(self, x_t, t, noise):
+        
+        # if self.predict_epsilon, model output is (scaled) noise;
+        #otherwise, model predicts x0 directly
+        
         if self.predict_epsilon:
             return (
                 extract(self.sqrt_recip_alphas_cumprod, t, x_t.shape) * x_t -
@@ -141,10 +144,10 @@ class GaussianDiffusion(nn.Module):
         )
         posterior_variance = extract(self.posterior_variance, t, x_t.shape)
         posterior_log_variance_clipped = extract(self.posterior_log_variance_clipped, t, x_t.shape)
-        return posterior_mean, posterior_variance, posterior_log_variance_clipped
+        return posterior_mean, posterior_variance, posterior_log_variance_clipped'''
 
     def p_mean_variance(self, x, cond, t):
-        x_recon = self.predict_start_from_noise(x, t=t, noise=self.model(x, cond, t))
+        '''x_recon = self.predict_start_from_noise(x, t=t, noise=self.model(x, cond, t))
 
         if self.clip_denoised:
             x_recon.clamp_(-1., 1.)
@@ -153,7 +156,19 @@ class GaussianDiffusion(nn.Module):
 
         model_mean, posterior_variance, posterior_log_variance = self.q_posterior(
                 x_start=x_recon, x_t=x, t=t)
-        return model_mean, posterior_variance, posterior_log_variance
+        return model_mean, posterior_variance, posterior_log_variance'''
+        x_noisy = x
+        
+
+        v_t = self.model(x_noisy, cond, t)
+        
+        
+        x_less_noisy = x_noisy + v_t * (float)(1/self.n_timesteps)
+        x_less_noisy = apply_conditioning(x_less_noisy, cond, self.action_dim)
+
+        return x_less_noisy
+
+
 
     @torch.no_grad()
     def p_sample_loop(self, shape, cond, verbose=True, return_chain=False, sample_fn=default_sample_fn, **sample_kwargs):
@@ -166,7 +181,7 @@ class GaussianDiffusion(nn.Module):
         chain = [x] if return_chain else None
 
         progress = utils.Progress(self.n_timesteps) if verbose else utils.Silent()
-        for i in reversed(range(0, self.n_timesteps)):
+        for i in range(0, self.n_timesteps):
             t = make_timesteps(batch_size, i, device)
             x, values = sample_fn(self, x, cond, t, **sample_kwargs)
             x = apply_conditioning(x, cond, self.action_dim)
@@ -197,29 +212,40 @@ class GaussianDiffusion(nn.Module):
     def q_sample(self, x_start, t, noise=None):
         if noise is None:
             noise = torch.randn_like(x_start)
-
+        # x_start = data = x_1(in flowmatching)
+        # noise = x_0(in flowmatching)
+        '''
         sample = (
             extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start +
             extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
-        )
-
-        return sample
+        )'''
+        theta_min = 0.0
+        t = t / self.n_timesteps
+        t = t.view(-1, 1, 1)
+        return (1 - (1 - theta_min) * t) * noise + t * x_start # x_t(in flowmatching) = x_noisy
 
     def p_losses(self, x_start, cond, t):
+        # x_start = data = x_1(in flowmatching)
+        
         noise = torch.randn_like(x_start)
+        # noise = x_0(in  flowmatching)
 
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
         x_noisy = apply_conditioning(x_noisy, cond, self.action_dim)
 
-        x_recon = self.model(x_noisy, cond, t)
-        x_recon = apply_conditioning(x_recon, cond, self.action_dim)
+        theta_min = 0.0
+        v_t_predict = self.model(x_noisy, cond, t)
+        v_t_predict = apply_conditioning(v_t_predict, cond, self.action_dim)
+        #v_t의 s0 자리가 loss에 영향을 미치지 않도록 apply_conditioning을 이용함.
+        v_t_true = x_start - (1- theta_min) * noise
+        v_t_true = apply_conditioning(v_t_true, cond, self.action_dim)
 
-        assert noise.shape == x_recon.shape
+        assert v_t_true.shape == v_t_predict.shape
 
         if self.predict_epsilon:
-            loss, info = self.loss_fn(x_recon, noise)
+            loss, info = self.loss_fn(v_t_predict, v_t_true)
         else:
-            loss, info = self.loss_fn(x_recon, x_start)
+            loss, info = self.loss_fn(v_t_predict, v_t_true)
 
         return loss, info
 
