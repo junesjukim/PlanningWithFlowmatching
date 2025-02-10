@@ -142,3 +142,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# for terminal outputs
+*.out
+*.log
+output/
