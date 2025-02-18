@@ -134,6 +134,7 @@ class TemporalUnet(nn.Module):
         x = self.mid_block2(x, t)
 
         for resnet, resnet2, attn, upsample in self.ups:
+            print("temp", x.shape, h[-1].shape)
             x = torch.cat((x, h.pop()), dim=1)
             x = resnet(x, t)
             x = resnet2(x, t)
