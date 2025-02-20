@@ -222,6 +222,8 @@ class GaussianDiffusion(nn.Module):
         theta_min = 0.0
         t = t / self.n_timesteps
         t = t.view(-1, 1, 1)
+        print(x_start.shape, noise.shape, t.shape)
+        print("testing if t is int : ", t)
         return (1 - (1 - theta_min) * t) * noise + t * x_start # x_t(in flowmatching) = x_noisy
 
     def p_losses(self, x_start, cond, t):
