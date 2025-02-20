@@ -177,3 +177,36 @@ halfcheetah_medium_replay_v2 = halfcheetah_medium_v2 = halfcheetah_medium_expert
         't_stopgrad': 4,
     },
 }
+
+
+walker2d_medium_replay_v2 = walker2d_medium_v2 = walker2d_medium_expert_v2 = {
+    'diffusion': {
+        'horizon': 4,
+        'dim_mults': (1, 4, 8)
+    },
+    'values': {
+        'horizon': 4,
+        'dim_mults': (1, 4, 8),
+    },
+    'plan': {
+        'horizon': 4,
+        'scale': 0.001,
+        't_stopgrad': 0,
+    },
+}
+
+hopper_medium_replay_v2 = hopper_medium_v2 = hopper_medium_expert_v2 = {
+    'diffusion': {
+        'horizon': 4,
+        'dim_mults': (1, 4, 8),
+    },
+    'values': {
+        'horizon': 4,
+        'dim_mults': (1, 4, 8),
+    },
+    'plan': {
+        'horizon': 4,
+        'scale': 0.0001,
+        't_stopgrad': 0,
+    },
+}
