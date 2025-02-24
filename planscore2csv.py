@@ -26,13 +26,22 @@ def read_score(file_path):
         return None
 
 def main():
+    # Set environment
+    env1 = "hopper"
+    env2 = "walker2d"
     # Define the four categories with their corresponding file path templates.
     # The {seed} placeholder will be replaced with the seed number.
     categories = {
-        "expert_T1": "logs/halfcheetah-medium-expert-v2/plans/H4_T1_S{seed}_d0.99/0/rollout.json",
-        "expert_T2": "logs/halfcheetah-medium-expert-v2/plans/H4_T2_S{seed}_d0.99/0/rollout.json",
-        "replay_T1": "logs/halfcheetah-medium-replay-v2/plans/H4_T1_S{seed}_d0.99/0/rollout.json",
-        "replay_T2": "logs/halfcheetah-medium-replay-v2/plans/H4_T2_S{seed}_d0.99/0/rollout.json"
+        #"hopper_expert_T1": f"logs/{env1}-medium-expert-v2/plans/H4_T1_S{{seed}}_d0.99/0/rollout.json",
+        #"hopper_expert_T2": f"logs/{env1}-medium-expert-v2/plans/H4_T2_S{{seed}}_d0.99/0/rollout.json",
+        "hopper_expert_T1": f"logs/{env1}-medium-expert-v2/plans/H4_T1_S{{seed}}_d0.99/0/rollout.json",
+        "hopper_expert_T2": f"logs/{env1}-medium-expert-v2/plans/H4_T2_S{{seed}}_d0.99/0/rollout.json",
+        "hopper_replay_T1": f"logs/{env1}-medium-replay-v2/plans/H4_T1_S{{seed}}_d0.99/0/rollout.json",
+        "hopper_replay_T2": f"logs/{env1}-medium-replay-v2/plans/H4_T2_S{{seed}}_d0.99/0/rollout.json",
+        "walker2d_expert_T1": f"logs/{env2}-medium-expert-v2/plans/H4_T1_S{{seed}}_d0.99/0/rollout.json",
+        "walker2d_expert_T2": f"logs/{env2}-medium-expert-v2/plans/H4_T2_S{{seed}}_d0.99/0/rollout.json",
+        "walker2d_replay_T1": f"logs/{env2}-medium-replay-v2/plans/H4_T1_S{{seed}}_d0.99/0/rollout.json",
+        "walker2d_replay_T2": f"logs/{env2}-medium-replay-v2/plans/H4_T2_S{{seed}}_d0.99/0/rollout.json",
     }
     
     # Dictionary to hold results per seed.
@@ -55,7 +64,7 @@ def main():
         if valid_scores:
             avg = sum(valid_scores) / len(valid_scores)
             averages[cat] = avg
-            # Compute sample standard deviation and standard error if more than one score is available.
+            # Compute standard error if more than one score is available.
             if len(valid_scores) > 1:
                 stdev = statistics.stdev(valid_scores)
                 std_errors[cat] = stdev / math.sqrt(len(valid_scores))
